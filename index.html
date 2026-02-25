@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TerraAvia_ExamPortal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap"
+    rel="stylesheet" />
+  <style>
+    /* ─────────────────────────────────────────────
+       DESIGN TOKENS
+    ───────────────────────────────────────────── */
+    :root {
+      --ink: #0d0d14;
+      --paper: #f5f3ee;
+      --card: #ffffff;
+      --accent: #2a52be;
+      --accent2: #e84855;
+      --green: #22c55e;
+      --muted: #8a8a9a;
+      --border: #e2e0d9;
+      --radius: 14px;
+      --shadow: 0 4px 32px rgba(0, 0, 0, 0.08);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─────────────────────────────────────────────
+       NOISE TEXTURE OVERLAY
+    ───────────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─────────────────────────────────────────────
+       LAYOUT WRAPPER
+    ───────────────────────────────────────────── */
+    .view {
+      display: none;
+      flex: 1;
+    }
+
+    .view.active {
+      display: flex;
+    }
+
+    /* ─────────────────────────────────────────────
+       HEADER BAR
+    ───────────────────────────────────────────── */
+    .topbar {
+      background: var(--ink);
+      color: #fff;
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .topbar .brand {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.1rem;
+      letter-spacing: -.02em;
+    }
+
+    .topbar .user-chip {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      background: rgba(255, 255, 255, .1);
+      padding: .3rem .8rem;
+      border-radius: 99px;
+      font-size: .85rem;
+    }
+
+    .topbar .user-chip span {
+      font-weight: 600;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+
+    .btn-topbar {
+      background: rgba(255, 255, 255, .15);
+      color: #fff;
+      border: none;
+      padding: .4rem .9rem;
+      border-radius: 8px;
+      font-family: 'Syne', sans-serif;
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+    }
+
+    .btn-topbar:hover {
+      background: rgba(255, 255, 255, .25);
+    }
+
+    /* ─────────────────────────────────────────────
+       ① LOGIN PAGE
+    ───────────────────────────────────────────── */
+    #login-view {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3rem 2.5rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: var(--shadow);
+      animation: slideUp .5s ease both;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .login-eyebrow {
+      font-family: 'Syne', sans-serif;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: .6rem;
+    }
+
+    .login-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: .4rem;
+    }
+
+    .login-subtitle {
+      color: var(--muted);
+      font-size: .9rem;
+      margin-bottom: 2rem;
+    }
+
+    /* form controls */
+    .field {
+      margin-bottom: 1.2rem;
+    }
+
+    .field label {
+      display: block;
+      font-size: .82rem;
+      font-weight: 500;
+      margin-bottom: .4rem;
+      color: var(--ink);
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      padding: .75rem 1rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: .95rem;
+      background: var(--paper);
+      color: var(--ink);
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(42, 82, 190, .12);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: .85rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s, background .15s;
+      letter-spacing: .01em;
+    }
+
+    .btn-primary:hover {
+      background: #1e3ea0;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(42, 82, 190, .3);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .error-msg {
+      margin-top: 1rem;
+      padding: .7rem 1rem;
+      background: #fff0f0;
+      border: 1px solid #ffd6d6;
+      border-left: 3px solid var(--accent2);
+      border-radius: 8px;
+      color: var(--accent2);
+      font-size: .88rem;
+      display: none;
+    }
+
+    .error-msg.visible {
+      display: block;
+      animation: shake .3s ease;
+    }
+
+    @keyframes shake {
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      25% {
+        transform: translateX(-6px);
+      }
+
+      75% {
+        transform: translateX(6px);
+      }
+    }
+
+    /* decorative blobs behind login card */
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: .35;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .blob-1 {
+      width: 400px;
+      height: 400px;
+      background: #c7d4ff;
+      top: -100px;
+      right: -80px;
+    }
+
+    .blob-2 {
+      width: 300px;
+      height: 300px;
+      background: #ffd6d9;
+      bottom: -60px;
+      left: -60px;
+    }
+
+    /* ─────────────────────────────────────────────
+       ② TEST SELECTION PAGE
+    ───────────────────────────────────────────── */
+    #select-view {
+      flex-direction: column;
+    }
+
+    .select-body {
+      max-width: 820px;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem 4rem;
+      width: 100%;
+    }
+
+    .select-header {
+      margin-bottom: 2rem;
+    }
+
+    .select-header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: .4rem;
+    }
+
+    .select-header p {
+      color: var(--muted);
+      font-size: .95rem;
+    }
+
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+
+    .test-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: 0 1px 8px rgba(0, 0, 0, .04);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      transition: border-color .2s, box-shadow .2s, transform .2s;
+      animation: fadeIn .4s ease both;
+    }
+
+    .test-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 20px rgba(42, 82, 190, .1);
+      transform: translateY(-2px);
+    }
+
+    .test-card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #eef2fd 0%, #dbe4ff 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+
+    .test-card-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .test-card-meta {
+      font-size: .82rem;
+      color: var(--muted);
+    }
+
+    .btn-start-test {
+      padding: .65rem 1.2rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Syne', sans-serif;
+      font-size: .88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, transform .15s;
+      align-self: flex-start;
+    }
+
+    .btn-start-test:hover {
+      background: #1e3ea0;
+      transform: translateY(-1px);
+    }
+
+    .no-tests-msg {
+      text-align: center;
+      padding: 3rem;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    /* ─────────────────────────────────────────────
+       ③ EXAM PAGE
+    ───────────────────────────────────────────── */
+    #exam-view {
+      flex-direction: column;
+    }
+
+    .exam-body {
+      max-width: 820px;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem 4rem;
+      width: 100%;
+    }
+
+    .exam-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .exam-meta h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+    }
+
+    .progress-pill {
+      background: var(--ink);
+      color: #fff;
+      font-size: .82rem;
+      font-weight: 600;
+      padding: .35rem .9rem;
+      border-radius: 99px;
+    }
+
+    /* question card */
+    .q-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.8rem;
+      margin-bottom: 1.2rem;
+      box-shadow: 0 1px 8px rgba(0, 0, 0, .04);
+      animation: fadeIn .4s ease both;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .q-num {
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: .5rem;
+    }
+
+    .q-text {
+      font-size: 1rem;
+      font-weight: 500;
+      line-height: 1.55;
+      margin-bottom: 1.2rem;
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: .55rem;
+    }
+
+    .option-label {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: .75rem 1rem;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      font-size: .93rem;
+    }
+
+    .option-label:hover {
+      border-color: var(--accent);
+      background: #f0f4ff;
+    }
+
+    .option-label input[type="radio"] {
+      accent-color: var(--accent);
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .option-label:has(input:checked) {
+      border-color: var(--accent);
+      background: #eef2fd;
+      font-weight: 500;
+    }
+
+    .option-key {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: var(--border);
+      font-size: .75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .option-label:has(input:checked) .option-key {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* submit bar */
+    .submit-bar {
+      position: sticky;
+      bottom: 0;
+      background: var(--paper);
+      border-top: 1px solid var(--border);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .submit-note {
+      font-size: .85rem;
+      color: var(--muted);
+    }
+
+    .submit-note strong {
+      color: var(--ink);
+    }
+
+    .btn-submit {
+      padding: .8rem 2rem;
+      background: var(--accent2);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Syne', sans-serif;
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+      white-space: nowrap;
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(232, 72, 85, .3);
+    }
+
+    .btn-submit:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* loading skeleton */
+    .skeleton {
+      background: linear-gradient(90deg, var(--border) 25%, #ece9e0 50%, var(--border) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+
+    @keyframes shimmer {
+      from {
+        background-position: 200% 0;
+      }
+
+      to {
+        background-position: -200% 0;
+      }
+    }
+
+    /* ─────────────────────────────────────────────
+       ④ RESULT PAGE
+    ───────────────────────────────────────────── */
+    #result-view {
+      flex-direction: column;
+    }
+
+    .result-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 1.5rem;
+      text-align: center;
+    }
+
+    .result-ring {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: conic-gradient(var(--accent) 0% var(--score-pct, 0%), var(--border) var(--score-pct, 0%) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-bottom: 2rem;
+      box-shadow: 0 0 0 12px var(--card), 0 0 0 13px var(--border);
+    }
+
+    .result-ring::before {
+      content: '';
+      position: absolute;
+      inset: 14px;
+      border-radius: 50%;
+      background: var(--card);
+    }
+
+    .result-score-num {
+      position: relative;
+      z-index: 1;
+      font-family: 'Syne', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .result-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin-bottom: .5rem;
+    }
+
+    .result-sub {
+      color: var(--muted);
+      font-size: .95rem;
+      margin-bottom: 2rem;
+    }
+
+    .result-stats {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .stat-pill {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .8rem 1.4rem;
+      font-size: .88rem;
+    }
+
+    .stat-pill strong {
+      display: block;
+      font-family: 'Syne', sans-serif;
+      font-size: 1.2rem;
+      margin-bottom: .2rem;
+    }
+
+    .result-ring.pass {
+      background: conic-gradient(#22c55e 0% var(--score-pct, 0%), var(--border) var(--score-pct, 0%) 100%);
+    }
+
+    .result-ring.fail {
+      background: conic-gradient(var(--accent2) 0% var(--score-pct, 0%), var(--border) var(--score-pct, 0%) 100%);
+    }
+
+    .verdict {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .7rem 1.4rem;
+      border-radius: 99px;
+      font-family: 'Syne', sans-serif;
+      font-size: .95rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+    }
+
+    .verdict.pass {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .verdict.fail {
+      background: #fff0f0;
+      color: #be123c;
+    }
+
+    .btn-back {
+      padding: .75rem 1.8rem;
+      background: transparent;
+      color: var(--ink);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-family: 'Syne', sans-serif;
+      font-size: .9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+    }
+
+    .btn-back:hover {
+      border-color: var(--ink);
+      background: var(--ink);
+      color: #fff;
+    }
+
+    .btn-logout {
+      padding: .75rem 1.8rem;
+      background: transparent;
+      color: var(--ink);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-family: 'Syne', sans-serif;
+      font-size: .9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+    }
+
+    .btn-logout:hover {
+      border-color: var(--ink);
+      background: var(--ink);
+      color: #fff;
+    }
+
+    /* ─────────────────────────────────────────────
+       ⑤ ADMIN PANEL
+    ───────────────────────────────────────────── */
+    #admin-view {
+      flex-direction: column;
+    }
+
+    .admin-body {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+      width: 100%;
+    }
+
+    .admin-header {
+      margin-bottom: 2rem;
+    }
+
+    .admin-header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: .3rem;
+    }
+
+    .admin-header p {
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    /* tabs */
+    .admin-tabs {
+      display: flex;
+      gap: .25rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0;
+    }
+
+    .admin-tab {
+      padding: .7rem 1.3rem;
+      background: none;
+      border: none;
+      font-family: 'Syne', sans-serif;
+      font-size: .9rem;
+      font-weight: 700;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: color .2s, border-color .2s;
+    }
+
+    .admin-tab:hover {
+      color: var(--ink);
+    }
+
+    .admin-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .admin-panel {
+      display: none;
+    }
+
+    .admin-panel.active {
+      display: block;
+      animation: fadeIn .3s ease;
+    }
+
+    /* admin card */
+    .admin-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 8px rgba(0, 0, 0, .04);
+    }
+
+    .admin-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: .75rem;
+    }
+
+    .admin-card-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    /* admin buttons */
+    .btn-admin {
+      padding: .55rem 1.1rem;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Syne', sans-serif;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s, opacity .15s;
+    }
+
+    .btn-admin:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-admin:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-admin.primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-admin.primary:hover {
+      box-shadow: 0 4px 16px rgba(42, 82, 190, .25);
+    }
+
+    .btn-admin.danger {
+      background: var(--accent2);
+      color: #fff;
+    }
+
+    .btn-admin.danger:hover {
+      box-shadow: 0 4px 16px rgba(232, 72, 85, .25);
+    }
+
+    .btn-admin.success {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .btn-admin.success:hover {
+      box-shadow: 0 4px 16px rgba(34, 197, 94, .25);
+    }
+
+    .btn-admin.ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1.5px solid var(--border);
+    }
+
+    .btn-admin.ghost:hover {
+      border-color: var(--ink);
+    }
+
+    /* inline form */
+    .inline-form {
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .inline-form input {
+      padding: .55rem .8rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: .9rem;
+      background: var(--paper);
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .inline-form input:focus {
+      border-color: var(--accent);
+    }
+
+    /* admin table */
+    .admin-table-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .88rem;
+    }
+
+    .admin-table th,
+    .admin-table td {
+      padding: .7rem .9rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .admin-table th {
+      background: var(--paper);
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      position: sticky;
+      top: 0;
+    }
+
+    .admin-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .admin-table tr:hover td {
+      background: #faf9f6;
+    }
+
+    .admin-table input[type="checkbox"] {
+      accent-color: var(--accent);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    /* test list in admin */
+    .test-list {
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+
+    .test-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .75rem 1rem;
+      background: var(--paper);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .test-item-name {
+      font-weight: 600;
+      font-size: .92rem;
+    }
+
+    /* admin filters */
+    .admin-filters {
+      display: flex;
+      gap: .5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .admin-filters select,
+    .admin-filters input {
+      padding: .5rem .8rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: .85rem;
+      background: var(--paper);
+      outline: none;
+    }
+
+    .admin-filters select:focus,
+    .admin-filters input:focus {
+      border-color: var(--accent);
+    }
+
+    /* badge */
+    .badge {
+      display: inline-block;
+      padding: .2rem .6rem;
+      border-radius: 6px;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+
+    .badge.pass {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .badge.fail {
+      background: #fff0f0;
+      color: #be123c;
+    }
+
+    /* spinner */
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* loading overlay */
+    .loading-overlay {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+      gap: 1rem;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    /* ── No copy on exam page ────────────────────── */
+    #exam-view .exam-body {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* responsive */
+    @media (max-width: 560px) {
+      .login-card {
+        padding: 2rem 1.5rem;
+      }
+
+      .login-title {
+        font-size: 1.6rem;
+      }
+
+      .submit-bar {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .btn-submit {
+        width: 100%;
+      }
+
+      .admin-tabs {
+        overflow-x: auto;
+      }
+
+      .test-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .result-buttons {
+        flex-direction: column;
+      }
+    }
+
+    .result-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ① LOGIN ─────────────────────────────────── -->
+  <div id="login-view" class="view active">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="login-card">
+      <p class="login-eyebrow">TerraAvia Online Assessment</p>
+      <h1 class="login-title">Exam Portal</h1>
+      <p class="login-subtitle">Sign in with your student credentials to begin.</p>
+
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" type="text" placeholder="e.g. student1" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+
+      <button id="login-btn" class="btn-primary" onclick="App.login()">Login</button>
+      <div id="login-error" class="error-msg">Invalid username or password. Please try again.</div>
+    </div>
+  </div>
+
+  <!-- ② TEST SELECTION ────────────────────────── -->
+  <div id="select-view" class="view">
+    <nav class="topbar">
+      <span class="brand">Exam Portal</span>
+      <div class="topbar-actions">
+        <div class="user-chip">👤 <span id="select-username"></span></div>
+        <button class="btn-topbar" onclick="App.logout()">Logout</button>
+      </div>
+    </nav>
+
+    <div class="select-body">
+      <div class="select-header">
+        <h1>Choose a Test</h1>
+        <p>Select one of your assigned tests to begin.</p>
+      </div>
+      <div id="test-grid" class="test-grid">
+        <!-- test cards rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ EXAM ──────────────────────────────────── -->
+  <div id="exam-view" class="view">
+    <nav class="topbar">
+      <span class="brand">Exam Portal</span>
+      <div class="topbar-actions">
+        <div class="user-chip">👤 <span id="exam-username"></span></div>
+      </div>
+    </nav>
+
+    <div class="exam-body">
+      <div class="exam-meta">
+        <h1 id="exam-title">Online Exam</h1>
+        <div class="progress-pill" id="question-count">Loading…</div>
+      </div>
+      <div id="questions-container">
+        <!-- questions rendered by JS -->
+      </div>
+    </div>
+
+    <div class="submit-bar">
+      <p class="submit-note">Answer <strong>all questions</strong> before submitting.</p>
+      <button id="submit-btn" class="btn-submit" onclick="App.submit()">Submit Exam</button>
+    </div>
+  </div>
+
+  <!-- ④ RESULT ─────────────────────────────────── -->
+  <div id="result-view" class="view">
+    <nav class="topbar">
+      <span class="brand">Exam Portal</span>
+      <div class="topbar-actions">
+        <div class="user-chip">👤 <span id="result-username"></span></div>
+      </div>
+    </nav>
+    <div class="result-body">
+      <div class="result-ring" id="result-ring">
+        <span class="result-score-num" id="result-score-num">–</span>
+      </div>
+      <h2 class="result-title" id="result-title">Exam Submitted!</h2>
+      <div id="result-verdict"></div>
+      <p class="result-sub" id="result-sub">Your answers have been recorded.</p>
+      <div class="result-stats" id="result-stats"></div>
+      <div class="result-buttons">
+        <button class="btn-back" onclick="App.backToTests()">← Choose Another Test</button>
+        <button class="btn-logout" onclick="App.logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ ADMIN PANEL ───────────────────────────── -->
+  <div id="admin-view" class="view">
+    <nav class="topbar">
+      <span class="brand">Exam Portal — Admin</span>
+      <div class="topbar-actions">
+        <button class="btn-topbar" onclick="App.adminTakeTests()">📝 Take Tests</button>
+        <div class="user-chip">👤 <span id="admin-username"></span></div>
+        <button class="btn-topbar" onclick="App.logout()">Logout</button>
+      </div>
+    </nav>
+
+    <div class="admin-body">
+      <div class="admin-header">
+        <h1>Admin Panel</h1>
+        <p>Manage tests, users, and review results.</p>
+      </div>
+
+      <div class="admin-tabs">
+        <button class="admin-tab active" onclick="App.switchAdminTab('tests', this)">📋 Tests</button>
+        <button class="admin-tab" onclick="App.switchAdminTab('users', this)">👥 Users</button>
+        <button class="admin-tab" onclick="App.switchAdminTab('results', this)">📊 Results</button>
+      </div>
+
+      <!-- TESTS TAB -->
+      <div id="admin-tests" class="admin-panel active">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <span class="admin-card-title">Available Tests</span>
+            <div class="inline-form">
+              <input type="text" id="new-test-name" placeholder="New test name…" />
+              <button class="btn-admin primary" onclick="App.createTest()">+ Create</button>
+            </div>
+          </div>
+          <div id="admin-test-list" class="test-list">
+            <!-- rendered by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- USERS TAB -->
+      <div id="admin-users" class="admin-panel">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <span class="admin-card-title">User Test Assignments</span>
+            <button class="btn-admin success" onclick="App.saveAssignments()">💾 Save Assignments</button>
+          </div>
+          <div id="admin-users-table" class="admin-table-wrap">
+            <!-- rendered by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULTS TAB -->
+      <div id="admin-results" class="admin-panel">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <span class="admin-card-title">Exam Results</span>
+            <button class="btn-admin ghost" onclick="App.loadAdminResults()">🔄 Refresh</button>
+          </div>
+          <div class="admin-filters">
+            <select id="filter-user">
+              <option value="">All Users</option>
+            </select>
+            <select id="filter-test">
+              <option value="">All Tests</option>
+            </select>
+            <select id="filter-passed">
+              <option value="">All Results</option>
+              <option value="YES">Passed</option>
+              <option value="NO">Failed</option>
+            </select>
+          </div>
+          <div id="admin-results-table" class="admin-table-wrap">
+            <!-- rendered by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
