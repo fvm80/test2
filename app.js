@@ -361,7 +361,7 @@ const App = (() => {
   //  SHOW RESULT
   // ════════════════════════════════════════════════════
   function showResult(score, correct, total) {
-    const PASS_THRESHOLD = 80;
+    const PASS_THRESHOLD = 75;
     const passed = score >= PASS_THRESHOLD;
 
     document.getElementById('result-username').textContent = currentUser.fullName || currentUser.username;
