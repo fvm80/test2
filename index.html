@@ -11,9 +11,7 @@
     href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap"
     rel="stylesheet" />
   <style>
-    /* ─────────────────────────────────────────────
-       DESIGN TOKENS
-    ───────────────────────────────────────────── */
+    /* ─── DESIGN TOKENS ───────────────────────────── */
     :root {
       --ink: #0d0d14;
       --paper: #f5f3ee;
@@ -44,9 +42,6 @@
       flex-direction: column;
     }
 
-    /* ─────────────────────────────────────────────
-       NOISE TEXTURE OVERLAY
-    ───────────────────────────────────────────── */
     body::before {
       content: '';
       position: fixed;
@@ -56,9 +51,6 @@
       z-index: 0;
     }
 
-    /* ─────────────────────────────────────────────
-       LAYOUT WRAPPER
-    ───────────────────────────────────────────── */
     .view {
       display: none;
       flex: 1;
@@ -68,9 +60,7 @@
       display: flex;
     }
 
-    /* ─────────────────────────────────────────────
-       HEADER BAR
-    ───────────────────────────────────────────── */
+    /* ─── HEADER BAR ──────────────────────────────── */
     .topbar {
       background: var(--ink);
       color: #fff;
@@ -128,9 +118,7 @@
       background: rgba(255, 255, 255, .25);
     }
 
-    /* ─────────────────────────────────────────────
-       ① LOGIN PAGE
-    ───────────────────────────────────────────── */
+    /* ─── ① LOGIN ─────────────────────────────────── */
     #login-view {
       flex-direction: column;
       align-items: center;
@@ -187,7 +175,6 @@
       margin-bottom: 2rem;
     }
 
-    /* form controls */
     .field {
       margin-bottom: 1.2rem;
     }
@@ -284,7 +271,6 @@
       }
     }
 
-    /* decorative blobs behind login card */
     .blob {
       position: fixed;
       border-radius: 50%;
@@ -310,9 +296,7 @@
       left: -60px;
     }
 
-    /* ─────────────────────────────────────────────
-       ② TEST SELECTION PAGE
-    ───────────────────────────────────────────── */
+    /* ─── ② TEST SELECTION ────────────────────────── */
     #select-view {
       flex-direction: column;
     }
@@ -414,9 +398,7 @@
       font-size: 1rem;
     }
 
-    /* ─────────────────────────────────────────────
-       ③ EXAM PAGE
-    ───────────────────────────────────────────── */
+    /* ─── ③ EXAM ──────────────────────────────────── */
     #exam-view {
       flex-direction: column;
     }
@@ -452,7 +434,6 @@
       border-radius: 99px;
     }
 
-    /* question card */
     .q-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -545,7 +526,6 @@
       color: #fff;
     }
 
-    /* submit bar */
     .submit-bar {
       position: sticky;
       bottom: 0;
@@ -592,7 +572,6 @@
       transform: none;
     }
 
-    /* loading skeleton */
     .skeleton {
       background: linear-gradient(90deg, var(--border) 25%, #ece9e0 50%, var(--border) 75%);
       background-size: 200% 100%;
@@ -610,9 +589,12 @@
       }
     }
 
-    /* ─────────────────────────────────────────────
-       ④ RESULT PAGE
-    ───────────────────────────────────────────── */
+    #exam-view .exam-body {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* ─── ④ RESULT ────────────────────────────────── */
     #result-view {
       flex-direction: column;
     }
@@ -723,25 +705,7 @@
       color: #be123c;
     }
 
-    .btn-back {
-      padding: .75rem 1.8rem;
-      background: transparent;
-      color: var(--ink);
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius);
-      font-family: 'Syne', sans-serif;
-      font-size: .9rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: border-color .2s, background .2s;
-    }
-
-    .btn-back:hover {
-      border-color: var(--ink);
-      background: var(--ink);
-      color: #fff;
-    }
-
+    .btn-back,
     .btn-logout {
       padding: .75rem 1.8rem;
       background: transparent;
@@ -755,15 +719,21 @@
       transition: border-color .2s, background .2s;
     }
 
+    .btn-back:hover,
     .btn-logout:hover {
       border-color: var(--ink);
       background: var(--ink);
       color: #fff;
     }
 
-    /* ─────────────────────────────────────────────
-       ⑤ ADMIN PANEL
-    ───────────────────────────────────────────── */
+    .result-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    /* ─── ⑤ ADMIN PANEL ──────────────────────────── */
     #admin-view {
       flex-direction: column;
     }
@@ -791,13 +761,11 @@
       font-size: .9rem;
     }
 
-    /* tabs */
     .admin-tabs {
       display: flex;
       gap: .25rem;
       margin-bottom: 1.5rem;
       border-bottom: 2px solid var(--border);
-      padding-bottom: 0;
     }
 
     .admin-tab {
@@ -832,7 +800,6 @@
       animation: fadeIn .3s ease;
     }
 
-    /* admin card */
     .admin-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -857,7 +824,6 @@
       font-weight: 700;
     }
 
-    /* admin buttons */
     .btn-admin {
       padding: .55rem 1.1rem;
       border: none;
@@ -916,7 +882,15 @@
       border-color: var(--ink);
     }
 
-    /* inline form */
+    .btn-admin.warning {
+      background: #f59e0b;
+      color: #fff;
+    }
+
+    .btn-admin.warning:hover {
+      box-shadow: 0 4px 16px rgba(245, 158, 11, .25);
+    }
+
     .inline-form {
       display: flex;
       gap: .5rem;
@@ -939,7 +913,6 @@
       border-color: var(--accent);
     }
 
-    /* admin table */
     .admin-table-wrap {
       overflow-x: auto;
       border-radius: 10px;
@@ -986,7 +959,14 @@
       cursor: pointer;
     }
 
-    /* test list in admin */
+    .admin-table tr.clickable {
+      cursor: pointer;
+    }
+
+    .admin-table tr.clickable:hover td {
+      background: #f0f4ff;
+    }
+
     .test-list {
       display: flex;
       flex-direction: column;
@@ -1001,14 +981,20 @@
       background: var(--paper);
       border-radius: 10px;
       border: 1px solid var(--border);
+      gap: .75rem;
     }
 
     .test-item-name {
       font-weight: 600;
       font-size: .92rem;
+      flex: 1;
     }
 
-    /* admin filters */
+    .test-item-actions {
+      display: flex;
+      gap: .4rem;
+    }
+
     .admin-filters {
       display: flex;
       gap: .5rem;
@@ -1032,7 +1018,6 @@
       border-color: var(--accent);
     }
 
-    /* badge */
     .badge {
       display: inline-block;
       padding: .2rem .6rem;
@@ -1051,7 +1036,207 @@
       color: #be123c;
     }
 
-    /* spinner */
+    /* ─── MODAL ────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      animation: fadeIn .2s ease;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--card);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 700px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 48px rgba(0, 0, 0, .15);
+      animation: slideUp .3s ease both;
+    }
+
+    .modal-header {
+      padding: 1.2rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.3rem;
+      cursor: pointer;
+      padding: .3rem;
+      border-radius: 6px;
+      transition: background .15s;
+    }
+
+    .modal-close:hover {
+      background: var(--paper);
+    }
+
+    .modal-body {
+      padding: 1.2rem 1.5rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: .5rem;
+    }
+
+    /* answer detail rows */
+    .answer-row {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: .6rem .8rem;
+      border-radius: 8px;
+      margin-bottom: .4rem;
+      font-size: .88rem;
+    }
+
+    .answer-row.correct {
+      background: #dcfce7;
+    }
+
+    .answer-row.incorrect {
+      background: #fff0f0;
+    }
+
+    .answer-row .q-id {
+      font-weight: 700;
+      min-width: 60px;
+      color: var(--muted);
+    }
+
+    .answer-row .answer-info {
+      flex: 1;
+    }
+
+    .answer-row .answer-icon {
+      font-size: 1rem;
+    }
+
+    /* question editor rows */
+    .qe-row {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: .6rem;
+    }
+
+    .qe-row-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: .5rem;
+    }
+
+    .qe-row-num {
+      font-family: 'Syne', sans-serif;
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .qe-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .4rem;
+    }
+
+    .qe-full {
+      grid-column: 1 / -1;
+    }
+
+    .qe-input {
+      width: 100%;
+      padding: .5rem .7rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: .85rem;
+      background: var(--card);
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .qe-input:focus {
+      border-color: var(--accent);
+    }
+
+    .qe-label {
+      font-size: .72rem;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: .2rem;
+      display: block;
+    }
+
+    /* user editor form */
+    .user-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .6rem;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: var(--paper);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .user-form .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .user-form label {
+      font-size: .72rem;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: .2rem;
+      display: block;
+    }
+
+    .user-form input {
+      width: 100%;
+      padding: .5rem .7rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: .85rem;
+      background: var(--card);
+      outline: none;
+    }
+
+    .user-form input:focus {
+      border-color: var(--accent);
+    }
+
+    /* spinner & loading */
     .spinner {
       width: 28px;
       height: 28px;
@@ -1069,7 +1254,6 @@
       }
     }
 
-    /* loading overlay */
     .loading-overlay {
       display: flex;
       flex-direction: column;
@@ -1079,12 +1263,6 @@
       gap: 1rem;
       color: var(--muted);
       font-size: .9rem;
-    }
-
-    /* ── No copy on exam page ────────────────────── */
-    #exam-view .exam-body {
-      user-select: none;
-      -webkit-user-select: none;
     }
 
     /* responsive */
@@ -1117,13 +1295,18 @@
       .result-buttons {
         flex-direction: column;
       }
-    }
 
-    .result-buttons {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      justify-content: center;
+      .qe-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .user-form {
+        grid-template-columns: 1fr;
+      }
+
+      .modal {
+        max-height: 90vh;
+      }
     }
   </style>
 </head>
@@ -1138,7 +1321,6 @@
       <p class="login-eyebrow">TerraAvia Online Assessment</p>
       <h1 class="login-title">Exam Portal</h1>
       <p class="login-subtitle">Sign in with your student credentials to begin.</p>
-
       <div class="field">
         <label for="username">Username</label>
         <input id="username" type="text" placeholder="e.g. student1" autocomplete="username" />
@@ -1147,9 +1329,8 @@
         <label for="password">Password</label>
         <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
       </div>
-
       <button id="login-btn" class="btn-primary" onclick="App.login()">Login</button>
-      <div id="login-error" class="error-msg">Invalid username or password. Please try again.</div>
+      <div id="login-error" class="error-msg"></div>
     </div>
   </div>
 
@@ -1162,15 +1343,12 @@
         <button class="btn-topbar" onclick="App.logout()">Logout</button>
       </div>
     </nav>
-
     <div class="select-body">
       <div class="select-header">
         <h1>Choose a Test</h1>
         <p>Select one of your assigned tests to begin.</p>
       </div>
-      <div id="test-grid" class="test-grid">
-        <!-- test cards rendered by JS -->
-      </div>
+      <div id="test-grid" class="test-grid"></div>
     </div>
   </div>
 
@@ -1182,17 +1360,13 @@
         <div class="user-chip">👤 <span id="exam-username"></span></div>
       </div>
     </nav>
-
     <div class="exam-body">
       <div class="exam-meta">
         <h1 id="exam-title">Online Exam</h1>
         <div class="progress-pill" id="question-count">Loading…</div>
       </div>
-      <div id="questions-container">
-        <!-- questions rendered by JS -->
-      </div>
+      <div id="questions-container"></div>
     </div>
-
     <div class="submit-bar">
       <p class="submit-note">Answer <strong>all questions</strong> before submitting.</p>
       <button id="submit-btn" class="btn-submit" onclick="App.submit()">Submit Exam</button>
@@ -1236,11 +1410,12 @@
     <div class="admin-body">
       <div class="admin-header">
         <h1>Admin Panel</h1>
-        <p>Manage tests, users, and review results.</p>
+        <p>Manage tests, questions, users, and review results.</p>
       </div>
 
       <div class="admin-tabs">
         <button class="admin-tab active" onclick="App.switchAdminTab('tests', this)">📋 Tests</button>
+        <button class="admin-tab" onclick="App.switchAdminTab('questions', this)">✏️ Questions</button>
         <button class="admin-tab" onclick="App.switchAdminTab('users', this)">👥 Users</button>
         <button class="admin-tab" onclick="App.switchAdminTab('results', this)">📊 Results</button>
       </div>
@@ -1255,22 +1430,66 @@
               <button class="btn-admin primary" onclick="App.createTest()">+ Create</button>
             </div>
           </div>
-          <div id="admin-test-list" class="test-list">
-            <!-- rendered by JS -->
+          <div id="admin-test-list" class="test-list"></div>
+        </div>
+      </div>
+
+      <!-- QUESTIONS TAB -->
+      <div id="admin-questions" class="admin-panel">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <span class="admin-card-title">Question Editor</span>
+            <div class="inline-form">
+              <select id="qe-test-select">
+                <option value="">— Select a test —</option>
+              </select>
+              <button class="btn-admin primary" onclick="App.loadQuestionsForEdit()">Load</button>
+            </div>
+          </div>
+          <div id="qe-container"></div>
+          <div id="qe-actions" style="display:none; margin-top:1rem;">
+            <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+              <button class="btn-admin primary" onclick="App.addQuestionRow()">+ Add Question</button>
+              <button class="btn-admin success" onclick="App.saveAllQuestions()">💾 Save All</button>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- USERS TAB -->
       <div id="admin-users" class="admin-panel">
+        <!-- User Creation -->
         <div class="admin-card">
           <div class="admin-card-header">
-            <span class="admin-card-title">User Test Assignments</span>
+            <span class="admin-card-title">Create New User</span>
+          </div>
+          <div class="user-form" id="new-user-form">
+            <div>
+              <label>Full Name</label>
+              <input type="text" id="new-user-fullname" placeholder="Ivan Ivanov" />
+            </div>
+            <div>
+              <label>Username</label>
+              <input type="text" id="new-user-username" placeholder="IvanI" />
+            </div>
+            <div>
+              <label>Password</label>
+              <input type="text" id="new-user-password" placeholder="Enter password" />
+            </div>
+            <div style="display:flex;align-items:flex-end;">
+              <button class="btn-admin primary" onclick="App.createUser()" style="width:100%;padding:.6rem;">+ Create
+                User</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- User-Test Assignment -->
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <span class="admin-card-title">User Management & Test Assignments</span>
             <button class="btn-admin success" onclick="App.saveAssignments()">💾 Save Assignments</button>
           </div>
-          <div id="admin-users-table" class="admin-table-wrap">
-            <!-- rendered by JS -->
-          </div>
+          <div id="admin-users-table" class="admin-table-wrap"></div>
         </div>
       </div>
 
@@ -1294,11 +1513,20 @@
               <option value="NO">Failed</option>
             </select>
           </div>
-          <div id="admin-results-table" class="admin-table-wrap">
-            <!-- rendered by JS -->
-          </div>
+          <div id="admin-results-table" class="admin-table-wrap"></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ─── MODAL ─────────────────────────────────── -->
+  <div id="modal-overlay" class="modal-overlay" onclick="App.closeModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span class="modal-title" id="modal-title">Details</span>
+        <button class="modal-close" onclick="App.closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
     </div>
   </div>
 
