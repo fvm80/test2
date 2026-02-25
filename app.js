@@ -1,8 +1,8 @@
 /**
  * ╔══════════════════════════════════════════════════════════╗
- * ║           ExamPortal — app.js  (Multi-Test)             ║
- * ║  Login, test selection, exam, scoring, admin panel,     ║
- * ║  and result submission via Google Apps Script.           ║
+ * ║           ExamPortal — app.js  (Multi-Test v2)          ║
+ * ║  Login, test selection, exam, scoring, admin panel      ║
+ * ║  with question editor, user manager, and results.       ║
  * ╚══════════════════════════════════════════════════════════╝
  */
 
@@ -11,13 +11,16 @@
 const App = (() => {
 
   /* ── State ─────────────────────────────────────── */
-  let endpoint = '';       // decoded GAS URL
-  let allUsers = [];       // fetched from GAS Users sheet
-  let allTests = [];       // { sheetName, title }
-  let currentUser = null;     // { username, fullName, tests, isAdmin }
-  let questions = [];       // current test questions
-  let currentTest = null;     // { sheetName, title } of the active test
-  let adminData = {};       // cached admin data
+  let endpoint = '';
+  let allUsers = [];
+  let allTests = [];
+  let currentUser = null;
+  let questions = [];
+  let currentTest = null;
+  let adminData = {};
+  let allResults = [];
+  let editQuestions = [];  // questions being edited
+  let editTestSheet = '';  // sheet name being edited
 
   /* ── Utility: SHA-256 ───────────────────────────── */
   async function sha256(str) {
@@ -38,7 +41,7 @@ const App = (() => {
     );
   }
 
-  /* ── Utility: shuffle array (Fisher-Yates) ──────── */
+  /* ── Utility: shuffle array ─────────────────────── */
   function shuffle(arr) {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
@@ -74,15 +77,16 @@ const App = (() => {
   }
 
   async function gasPost(payload) {
-    await fetch(endpoint, {
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload),
     });
+    return res.json();
   }
 
   // ════════════════════════════════════════════════════
-  //  INIT — load config
+  //  INIT
   // ════════════════════════════════════════════════════
   async function init() {
     try {
@@ -94,14 +98,12 @@ const App = (() => {
       alert('Failed to load configuration.\n' + err.message);
     }
 
-    // Enter key → login
     ['username', 'password'].forEach(id => {
       document.getElementById(id).addEventListener('keydown', e => {
         if (e.key === 'Enter') login();
       });
     });
 
-    // Admin filter listeners
     ['filter-user', 'filter-test', 'filter-passed'].forEach(id => {
       document.getElementById(id).addEventListener('change', filterResults);
     });
@@ -128,15 +130,11 @@ const App = (() => {
     loginBtn.textContent = 'Verifying…';
 
     try {
-      // Fetch users from GAS
       const data = await gasGet('getUsers');
       allUsers = data.users || [];
       allTests = data.tests || [];
 
-      // Hash input password
       const hash = await sha256(passwordInput);
-
-      // Find matching user
       const user = allUsers.find(u => u.username === usernameInput && u.passwordHash === hash);
 
       if (!user) {
@@ -147,7 +145,6 @@ const App = (() => {
         return;
       }
 
-      // Store current user
       const isAdmin = usernameInput === 'Admin';
       currentUser = {
         username: user.username,
@@ -158,7 +155,6 @@ const App = (() => {
 
       loginBtn.textContent = 'Loading…';
 
-      // Route to admin or test selection
       if (isAdmin) {
         await loadAdminPanel();
       } else {
@@ -182,10 +178,7 @@ const App = (() => {
     const grid = document.getElementById('test-grid');
     grid.innerHTML = '';
 
-    // Filter tests that the user has access to
     const userTests = allTests.filter(t => currentUser.tests.includes(t.sheetName));
-
-    // For Admin, show all tests
     const testsToShow = currentUser.isAdmin ? allTests : userTests;
 
     if (testsToShow.length === 0) {
@@ -213,18 +206,13 @@ const App = (() => {
   }
 
   // ════════════════════════════════════════════════════
-  //  START TEST — load questions for a specific test
+  //  START TEST
   // ════════════════════════════════════════════════════
   async function startTest(sheetName) {
     const test = allTests.find(t => t.sheetName === sheetName);
-    if (!test) {
-      alert('Test not found: ' + sheetName);
-      return;
-    }
+    if (!test) { alert('Test not found: ' + sheetName); return; }
 
     currentTest = test;
-
-    // Show loading state
     document.getElementById('exam-title').textContent = test.title;
     document.getElementById('question-count').textContent = 'Loading…';
     document.getElementById('questions-container').innerHTML =
@@ -233,15 +221,9 @@ const App = (() => {
 
     try {
       const data = await gasGet('getQuestions', { test: sheetName });
-
       if (data.error) throw new Error(data.error);
-
       questions = shuffle(data.questions || []);
-
-      if (questions.length === 0) {
-        throw new Error('No questions found in this test.');
-      }
-
+      if (questions.length === 0) throw new Error('No questions found in this test.');
       renderExam();
     } catch (err) {
       alert('Failed to load questions:\n' + err.message);
@@ -265,33 +247,29 @@ const App = (() => {
     const container = document.getElementById('questions-container');
     container.innerHTML = '';
 
-    // Block text copying
     const examBody = document.querySelector('.exam-body');
     examBody.addEventListener('copy', e => e.preventDefault());
     examBody.addEventListener('cut', e => e.preventDefault());
     examBody.addEventListener('contextmenu', e => e.preventDefault());
 
-    // Reset submit button
     const submitBtn = document.getElementById('submit-btn');
     submitBtn.disabled = false;
     submitBtn.textContent = 'Submit Exam';
 
     questions.forEach((q, idx) => {
-      // Build options dynamically — support 2 to 4
       const allOptions = [
         { key: 'A', text: q.option_a },
         { key: 'B', text: q.option_b },
         { key: 'C', text: q.option_c },
         { key: 'D', text: q.option_d },
       ];
-      // Filter out empty options
       const options = allOptions.filter(opt => opt.text && opt.text.trim() !== '');
 
       const card = document.createElement('div');
       card.className = 'q-card';
       card.style.animationDelay = `${idx * 0.05}s`;
       card.dataset.qid = q.question_id;
-      card.dataset.correct = q.correct_answer; // A/B/C/D
+      card.dataset.correct = q.correct_answer;
 
       card.innerHTML = `
         <div class="q-num">Question ${idx + 1}</div>
@@ -337,7 +315,6 @@ const App = (() => {
     btn.disabled = true;
     btn.textContent = 'Submitting…';
 
-    // Score calculation
     let correct = 0;
     const answerDetail = [];
 
@@ -360,7 +337,6 @@ const App = (() => {
     const score = Math.round((correct / total) * 100);
     const nowISO = new Date().toISOString();
 
-    // Build payload
     const payload = {
       action: 'submitResult',
       username: currentUser.username,
@@ -372,7 +348,6 @@ const App = (() => {
       answers: answerDetail,
     };
 
-    // POST to GAS
     try {
       await gasPost(payload);
     } catch (err) {
@@ -400,8 +375,7 @@ const App = (() => {
     document.getElementById('result-title').textContent =
       passed ? 'Exam Passed! 🎉' : 'Exam Not Passed';
 
-    const verdictEl = document.getElementById('result-verdict');
-    verdictEl.innerHTML = passed
+    document.getElementById('result-verdict').innerHTML = passed
       ? `<div class="verdict pass">✅ Congratulations, you passed the test!</div>`
       : `<div class="verdict fail">❌ Unfortunately, you did not pass the test, please try again!</div>`;
 
@@ -418,13 +392,9 @@ const App = (() => {
     showView('result-view');
   }
 
-  // ════════════════════════════════════════════════════
-  //  BACK TO TESTS (from result page)
-  // ════════════════════════════════════════════════════
   function backToTests() {
     questions = [];
     currentTest = null;
-
     if (currentUser.isAdmin && !currentUser._takingTests) {
       showView('admin-view');
     } else {
@@ -432,9 +402,6 @@ const App = (() => {
     }
   }
 
-  // ════════════════════════════════════════════════════
-  //  ADMIN: switch to test-taking mode
-  // ════════════════════════════════════════════════════
   function adminTakeTests() {
     currentUser._takingTests = true;
     renderTestSelection();
@@ -447,11 +414,10 @@ const App = (() => {
   async function loadAdminPanel() {
     document.getElementById('admin-username').textContent = currentUser.username;
     showView('admin-view');
-
-    // Load data
     await refreshAdminData();
     renderAdminTests();
     renderAdminUsers();
+    populateTestSelector();
   }
 
   async function refreshAdminData() {
@@ -468,17 +434,16 @@ const App = (() => {
 
   /* ── Admin Tab Switching ──────────────────────── */
   function switchAdminTab(tabName, btnEl) {
-    // Update tab buttons
     document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
     btnEl.classList.add('active');
-
-    // Update panels
     document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
     document.getElementById('admin-' + tabName).classList.add('active');
 
-    // Lazy load results
     if (tabName === 'results') {
       loadAdminResults();
+    }
+    if (tabName === 'questions') {
+      populateTestSelector();
     }
   }
 
@@ -494,7 +459,9 @@ const App = (() => {
     container.innerHTML = adminData.tests.map(test => `
       <div class="test-item">
         <span class="test-item-name">📋 ${escapeHtml(test.title)}</span>
-        <button class="btn-admin danger" onclick="App.deleteTest('${escapeHtml(test.title)}')">Delete</button>
+        <div class="test-item-actions">
+          <button class="btn-admin danger" onclick="App.deleteTest('${escapeHtml(test.title)}')">Delete</button>
+        </div>
       </div>
     `).join('');
   }
@@ -502,17 +469,15 @@ const App = (() => {
   async function createTest() {
     const input = document.getElementById('new-test-name');
     const name = input.value.trim();
-    if (!name) {
-      alert('Please enter a test name.');
-      return;
-    }
+    if (!name) { alert('Please enter a test name.'); return; }
 
     try {
-      const result = await gasPost({ action: 'createTest', testName: name });
+      await gasPost({ action: 'createTest', testName: name });
       input.value = '';
       await refreshAdminData();
       renderAdminTests();
       renderAdminUsers();
+      populateTestSelector();
       alert(`Test "${name}" created successfully!`);
     } catch (err) {
       alert('Failed to create test: ' + err.message);
@@ -520,22 +485,172 @@ const App = (() => {
   }
 
   async function deleteTest(testName) {
-    if (!confirm(`Are you sure you want to delete the test "${testName}"? This will also remove the sheet and all questions.`)) {
-      return;
-    }
+    if (!confirm(`Delete test "${testName}"? This removes the sheet and all questions.`)) return;
 
     try {
       await gasPost({ action: 'deleteTest', testName: testName });
       await refreshAdminData();
       renderAdminTests();
       renderAdminUsers();
+      populateTestSelector();
       alert(`Test "${testName}" deleted.`);
     } catch (err) {
       alert('Failed to delete test: ' + err.message);
     }
   }
 
-  /* ── Admin: User-Test Assignments ─────────────── */
+  /* ── Admin: Question Editor ───────────────────── */
+  function populateTestSelector() {
+    const sel = document.getElementById('qe-test-select');
+    sel.innerHTML = '<option value="">— Select a test —</option>';
+    (adminData.tests || []).forEach(t => {
+      sel.innerHTML += `<option value="${escapeHtml(t.sheetName)}">${escapeHtml(t.title)}</option>`;
+    });
+  }
+
+  async function loadQuestionsForEdit() {
+    const sel = document.getElementById('qe-test-select');
+    const sheetName = sel.value;
+    if (!sheetName) { alert('Please select a test first.'); return; }
+
+    editTestSheet = sheetName;
+    const container = document.getElementById('qe-container');
+    container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div><span>Loading questions…</span></div>';
+    document.getElementById('qe-actions').style.display = 'none';
+
+    try {
+      const data = await gasGet('getQuestions', { test: sheetName });
+      if (data.error) throw new Error(data.error);
+      editQuestions = data.questions || [];
+      renderQuestionEditor();
+    } catch (err) {
+      container.innerHTML = `<div class="no-tests-msg">Failed to load: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  function renderQuestionEditor() {
+    const container = document.getElementById('qe-container');
+    document.getElementById('qe-actions').style.display = 'block';
+
+    if (editQuestions.length === 0) {
+      container.innerHTML = '<div class="no-tests-msg">No questions yet. Click "+ Add Question" below.</div>';
+      return;
+    }
+
+    container.innerHTML = editQuestions.map((q, idx) => `
+      <div class="qe-row" data-idx="${idx}">
+        <div class="qe-row-header">
+          <span class="qe-row-num">Question ${idx + 1} (ID: ${escapeHtml(q.question_id)})</span>
+          <button class="btn-admin danger" onclick="App.removeQuestionRow(${idx})" style="padding:.3rem .7rem;font-size:.75rem;">✕ Remove</button>
+        </div>
+        <div class="qe-grid">
+          <div class="qe-full">
+            <span class="qe-label">Question Text</span>
+            <input class="qe-input" data-field="question_text" value="${escapeHtml(q.question_text)}" placeholder="Enter question…" />
+          </div>
+          <div>
+            <span class="qe-label">Option A *</span>
+            <input class="qe-input" data-field="option_a" value="${escapeHtml(q.option_a)}" placeholder="Option A" />
+          </div>
+          <div>
+            <span class="qe-label">Option B *</span>
+            <input class="qe-input" data-field="option_b" value="${escapeHtml(q.option_b)}" placeholder="Option B" />
+          </div>
+          <div>
+            <span class="qe-label">Option C (optional)</span>
+            <input class="qe-input" data-field="option_c" value="${escapeHtml(q.option_c)}" placeholder="Option C" />
+          </div>
+          <div>
+            <span class="qe-label">Option D (optional)</span>
+            <input class="qe-input" data-field="option_d" value="${escapeHtml(q.option_d)}" placeholder="Option D" />
+          </div>
+          <div>
+            <span class="qe-label">Correct Answer (A/B/C/D)</span>
+            <input class="qe-input" data-field="correct_answer" value="${escapeHtml(q.correct_answer)}" placeholder="A" maxlength="1" style="text-transform:uppercase;" />
+          </div>
+          <div>
+            <span class="qe-label">Question ID</span>
+            <input class="qe-input" data-field="question_id" value="${escapeHtml(q.question_id)}" placeholder="1" />
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function addQuestionRow() {
+    const nextId = editQuestions.length > 0
+      ? Math.max(...editQuestions.map(q => parseInt(q.question_id) || 0)) + 1
+      : 1;
+
+    editQuestions.push({
+      question_id: String(nextId),
+      question_text: '',
+      option_a: '',
+      option_b: '',
+      option_c: '',
+      option_d: '',
+      correct_answer: 'A',
+    });
+
+    renderQuestionEditor();
+
+    // Scroll to the new row
+    const container = document.getElementById('qe-container');
+    container.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function removeQuestionRow(idx) {
+    if (!confirm('Remove this question?')) return;
+    editQuestions.splice(idx, 1);
+    renderQuestionEditor();
+  }
+
+  function collectQuestionsFromUI() {
+    const rows = document.querySelectorAll('.qe-row');
+    const qs = [];
+    rows.forEach(row => {
+      const q = {};
+      row.querySelectorAll('.qe-input').forEach(input => {
+        q[input.dataset.field] = input.value.trim();
+      });
+      q.correct_answer = (q.correct_answer || 'A').toUpperCase();
+      qs.push(q);
+    });
+    return qs;
+  }
+
+  async function saveAllQuestions() {
+    if (!editTestSheet) { alert('No test selected.'); return; }
+
+    const qs = collectQuestionsFromUI();
+    editQuestions = qs;
+
+    // Validate
+    for (let i = 0; i < qs.length; i++) {
+      if (!qs[i].question_text) {
+        alert(`Question ${i + 1}: text is required.`);
+        return;
+      }
+      if (!qs[i].option_a || !qs[i].option_b) {
+        alert(`Question ${i + 1}: at least options A and B are required.`);
+        return;
+      }
+    }
+
+    try {
+      const result = await gasPost({
+        action: 'saveQuestions',
+        testSheetName: editTestSheet,
+        questions: qs,
+      });
+      if (result.error) throw new Error(result.error);
+      alert(`Saved ${qs.length} question(s) successfully!`);
+    } catch (err) {
+      alert('Failed to save: ' + err.message);
+    }
+  }
+
+  /* ── Admin: User Management ───────────────────── */
   function renderAdminUsers() {
     const container = document.getElementById('admin-users-table');
     const users = adminData.users || [];
@@ -547,17 +662,21 @@ const App = (() => {
     }
 
     let html = '<table class="admin-table"><thead><tr>';
-    html += '<th>Full Name</th><th>Username</th>';
+    html += '<th>Full Name</th><th>Username</th><th>Actions</th>';
     tests.forEach(t => {
       html += `<th style="text-align:center">${escapeHtml(t.title)}</th>`;
     });
     html += '</tr></thead><tbody>';
 
     users.forEach(user => {
-      if (user.username === 'Admin') return; // Skip admin in the assignment table
+      if (user.username === 'Admin') return;
       html += '<tr>';
       html += `<td>${escapeHtml(user.fullName)}</td>`;
       html += `<td><strong>${escapeHtml(user.username)}</strong></td>`;
+      html += `<td style="white-space:nowrap;">`;
+      html += `<button class="btn-admin warning" onclick="App.editUser('${escapeHtml(user.username)}')" style="padding:.25rem .6rem;font-size:.72rem;margin-right:.3rem;">Edit</button>`;
+      html += `<button class="btn-admin danger" onclick="App.deleteUser('${escapeHtml(user.username)}')" style="padding:.25rem .6rem;font-size:.72rem;">Del</button>`;
+      html += `</td>`;
       tests.forEach(t => {
         const checked = user.tests.includes(t.sheetName) ? 'checked' : '';
         html += `<td style="text-align:center"><input type="checkbox" data-username="${escapeHtml(user.username)}" data-test="${escapeHtml(t.sheetName)}" ${checked} /></td>`;
@@ -569,6 +688,95 @@ const App = (() => {
     container.innerHTML = html;
   }
 
+  async function createUser() {
+    const fullName = document.getElementById('new-user-fullname').value.trim();
+    const username = document.getElementById('new-user-username').value.trim();
+    const password = document.getElementById('new-user-password').value;
+
+    if (!fullName || !username || !password) {
+      alert('Please fill in all fields (Full Name, Username, Password).');
+      return;
+    }
+
+    const passwordHash = await sha256(password);
+
+    try {
+      const result = await gasPost({
+        action: 'createUser',
+        user: { fullName, username, passwordHash },
+      });
+      if (result.error) {
+        alert('Error: ' + result.error);
+        return;
+      }
+
+      document.getElementById('new-user-fullname').value = '';
+      document.getElementById('new-user-username').value = '';
+      document.getElementById('new-user-password').value = '';
+
+      await refreshAdminData();
+      renderAdminUsers();
+      alert(`User "${username}" created successfully!`);
+    } catch (err) {
+      alert('Failed to create user: ' + err.message);
+    }
+  }
+
+  function editUser(username) {
+    const user = adminData.users.find(u => u.username === username);
+    if (!user) return;
+
+    const newFullName = prompt('Full Name:', user.fullName);
+    if (newFullName === null) return;
+
+    const newPassword = prompt('New password (leave empty to keep current):');
+
+    (async () => {
+      try {
+        const updateData = {
+          action: 'updateUser',
+          user: {
+            username: username,
+            fullName: newFullName,
+          },
+        };
+
+        if (newPassword) {
+          updateData.user.passwordHash = await sha256(newPassword);
+        }
+
+        const result = await gasPost(updateData);
+        if (result.error) {
+          alert('Error: ' + result.error);
+          return;
+        }
+
+        await refreshAdminData();
+        renderAdminUsers();
+        alert('User updated!');
+      } catch (err) {
+        alert('Failed to update user: ' + err.message);
+      }
+    })();
+  }
+
+  async function deleteUser(username) {
+    if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
+
+    try {
+      const result = await gasPost({ action: 'deleteUser', username: username });
+      if (result.error) {
+        alert('Error: ' + result.error);
+        return;
+      }
+      await refreshAdminData();
+      renderAdminUsers();
+      alert(`User "${username}" deleted.`);
+    } catch (err) {
+      alert('Failed to delete user: ' + err.message);
+    }
+  }
+
   async function saveAssignments() {
     const checkboxes = document.querySelectorAll('#admin-users-table input[type="checkbox"]');
     const assignmentMap = {};
@@ -576,17 +784,12 @@ const App = (() => {
     checkboxes.forEach(cb => {
       const username = cb.dataset.username;
       const testName = cb.dataset.test;
-      if (!assignmentMap[username]) {
-        assignmentMap[username] = [];
-      }
-      if (cb.checked) {
-        assignmentMap[username].push(testName);
-      }
+      if (!assignmentMap[username]) assignmentMap[username] = [];
+      if (cb.checked) assignmentMap[username].push(testName);
     });
 
     const assignments = Object.entries(assignmentMap).map(([username, tests]) => ({
-      username,
-      tests,
+      username, tests,
     }));
 
     try {
@@ -599,8 +802,6 @@ const App = (() => {
   }
 
   /* ── Admin: Results ───────────────────────────── */
-  let allResults = [];
-
   async function loadAdminResults() {
     const container = document.getElementById('admin-results-table');
     container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div><span>Loading results…</span></div>';
@@ -619,12 +820,10 @@ const App = (() => {
     const userSelect = document.getElementById('filter-user');
     const testSelect = document.getElementById('filter-test');
 
-    // Unique users
     const uniqueUsers = [...new Set(allResults.map(r => r.username).filter(Boolean))];
     userSelect.innerHTML = '<option value="">All Users</option>' +
       uniqueUsers.map(u => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
 
-    // Unique tests
     const uniqueTests = [...new Set(allResults.map(r => r.test).filter(Boolean))];
     testSelect.innerHTML = '<option value="">All Tests</option>' +
       uniqueTests.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
@@ -638,7 +837,7 @@ const App = (() => {
     let filtered = allResults;
     if (userFilter) filtered = filtered.filter(r => r.username === userFilter);
     if (testFilter) filtered = filtered.filter(r => r.test === testFilter);
-    if (passedFilter) filtered = filtered.filter(r => String(r.passed) === passedFilter);
+    if (passedFilter) filtered = filtered.filter(r => String(r.passed).toUpperCase() === passedFilter);
 
     renderResultsTable(filtered);
   }
@@ -655,27 +854,88 @@ const App = (() => {
     html += '<th>Username</th><th>Test</th><th>Date</th><th>Score</th><th>Correct</th><th>Total</th><th>Status</th>';
     html += '</tr></thead><tbody>';
 
-    // Show newest first
     const sorted = [...results].reverse();
 
-    sorted.forEach(r => {
-      const passClass = String(r.passed) === 'YES' ? 'pass' : 'fail';
-      const passLabel = String(r.passed) === 'YES' ? 'PASSED' : 'FAILED';
-      const dateStr = r.date ? new Date(r.date).toLocaleString() : '';
+    sorted.forEach((r, idx) => {
+      const passedStr = String(r.passed).toUpperCase().trim();
+      const passClass = passedStr === 'YES' ? 'pass' : 'fail';
+      const passLabel = passedStr === 'YES' ? 'PASSED' : 'FAILED';
 
-      html += '<tr>';
+      let dateStr = '';
+      if (r.date) {
+        try {
+          const d = new Date(r.date);
+          dateStr = d.toLocaleString();
+        } catch (e) {
+          dateStr = String(r.date);
+        }
+      }
+
+      const resultIdx = results.length - 1 - idx; // original index in reversed order
+      html += `<tr class="clickable" onclick="App.showAnswerDetail(${sorted.length - 1 - idx})" title="Click to view answers">`;
       html += `<td><strong>${escapeHtml(r.username)}</strong></td>`;
-      html += `<td>${escapeHtml(r.test || '')}</td>`;
+      html += `<td>${escapeHtml(r.test)}</td>`;
       html += `<td>${escapeHtml(dateStr)}</td>`;
-      html += `<td>${escapeHtml(String(r.score || ''))}</td>`;
-      html += `<td>${escapeHtml(String(r.correct || ''))}</td>`;
-      html += `<td>${escapeHtml(String(r.total || ''))}</td>`;
+      html += `<td>${escapeHtml(String(r.score))}</td>`;
+      html += `<td>${r.correct}</td>`;
+      html += `<td>${r.total}</td>`;
       html += `<td><span class="badge ${passClass}">${passLabel}</span></td>`;
       html += '</tr>';
     });
 
     html += '</tbody></table>';
     container.innerHTML = html;
+  }
+
+  /* ── Answer Detail Modal ──────────────────────── */
+  function showAnswerDetail(resultIndex) {
+    const r = allResults[resultIndex];
+    if (!r) return;
+
+    const answers = r.answers || [];
+
+    let dateStr = '';
+    if (r.date) {
+      try { dateStr = new Date(r.date).toLocaleString(); } catch (e) { dateStr = String(r.date); }
+    }
+
+    document.getElementById('modal-title').textContent =
+      `${r.username} — ${r.test} (${r.score}, ${dateStr})`;
+
+    let html = '';
+
+    if (answers.length === 0) {
+      html = '<div class="no-tests-msg">No answer details available for this result.</div>';
+    } else {
+      html += `<div style="margin-bottom:.8rem;font-size:.85rem;color:var(--muted);">
+        ${answers.filter(a => a.is_correct).length} correct out of ${answers.length} questions
+      </div>`;
+
+      answers.forEach(a => {
+        const isCorrect = a.is_correct;
+        const rowClass = isCorrect ? 'correct' : 'incorrect';
+        const icon = isCorrect ? '✅' : '❌';
+
+        html += `
+          <div class="answer-row ${rowClass}">
+            <span class="answer-icon">${icon}</span>
+            <span class="q-id">Q#${escapeHtml(a.question_id)}</span>
+            <span class="answer-info">
+              Answer: <strong>${escapeHtml(a.user_answer)}</strong>
+              ${!isCorrect ? ` → Correct: <strong>${escapeHtml(a.correct_answer)}</strong>` : ''}
+            </span>
+          </div>
+        `;
+      });
+    }
+
+    document.getElementById('modal-body').innerHTML = html;
+    document.getElementById('modal-overlay').classList.add('active');
+  }
+
+  function closeModal(event) {
+    if (event && event.target !== document.getElementById('modal-overlay')) return;
+    document.getElementById('modal-overlay').classList.remove('active');
   }
 
   // ════════════════════════════════════════════════════
@@ -689,6 +949,8 @@ const App = (() => {
     allTests = [];
     adminData = {};
     allResults = [];
+    editQuestions = [];
+    editTestSheet = '';
 
     document.getElementById('username').value = '';
     document.getElementById('password').value = '';
@@ -701,7 +963,7 @@ const App = (() => {
     showView('login-view');
   }
 
-  /* ── Bootstrap ──────────────────────────────────── */
+  /* ── Bootstrap ────────────────────────────────── */
   document.addEventListener('DOMContentLoaded', init);
 
   /* ── Public API ─────────────────────────────────── */
@@ -717,6 +979,17 @@ const App = (() => {
     deleteTest,
     saveAssignments,
     loadAdminResults,
+    showAnswerDetail,
+    closeModal,
+    // Question editor
+    loadQuestionsForEdit,
+    addQuestionRow,
+    removeQuestionRow,
+    saveAllQuestions,
+    // User management
+    createUser,
+    editUser,
+    deleteUser,
   };
 
 })();
