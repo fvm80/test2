@@ -334,7 +334,7 @@ const App = (() => {
     });
 
     const total = questions.length;
-    const score = Math.round((correct / total) * 100);
+    const  = Math.round((correct / total) * 100);
     const nowISO = new Date().toISOString();
 
     const payload = {
@@ -876,7 +876,7 @@ const App = (() => {
       html += `<td><strong>${escapeHtml(r.username)}</strong></td>`;
       html += `<td>${escapeHtml(r.test)}</td>`;
       html += `<td>${escapeHtml(dateStr)}</td>`;
-      html += `<td>${escapeHtml(String(r.score))}</td>`;
+      html += `<td>${escapeHtml(String((r.score * 100).toFixed(0)))}%</td>`;
       html += `<td>${r.correct}</td>`;
       html += `<td>${r.total}</td>`;
       html += `<td><span class="badge ${passClass}">${passLabel}</span></td>`;
